@@ -1,108 +1,77 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const dotenv = require("dotenv");
-const signTypedData_v4 = require("eth-sig-util");
+const ethsig = require("eth-sig-util");
 const fromRpcSig = require("ethereumjs-util");
 const owner = "0x15C6b352c1F767Fa2d79625a40Ca4087Fab9a198";
 const spender = "0x721C0E481Ae5763b425aCb1b04ba98baF480D83B";
-const aaveAddress = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9";
-const AaveTokenAbi =  [
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "address",
-        name: "previousAdmin",
-        type: "address",
-      },
-      {
-        indexed: false,
-        internalType: "address",
-        name: "newAdmin",
-        type: "address",
-      },
-    ],
-    name: "AdminChanged",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "implementation",
-        type: "address",
-      },
-    ],
-    name: "Upgraded",
-    type: "event",
-  },
-  { stateMutability: "payable", type: "fallback" },
+const aaveAddress = "0xC13eac3B4F9EED480045113B7af00F7B5655Ece8";
+
+const privateKey = process.env.PRIVATE_KEY;
+const apiKey = process.env.ALCHEMY_KEY;
+const AaveTokenAbi = [
+  { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   {
     inputs: [],
-    name: "admin",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "nonpayable",
+    name: "DOMAIN_SEPARATOR",
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
+    stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [{ internalType: "address", name: "newAdmin", type: "address" }],
-    name: "changeAdmin",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "implementation",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "nonpayable",
+    inputs: [{ internalType: "address", name: "", type: "address" }],
+    name: "_nonces",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      { internalType: "address", name: "_logic", type: "address" },
-      { internalType: "address", name: "_admin", type: "address" },
-      { internalType: "bytes", name: "_data", type: "bytes" },
+      { internalType: "address", name: "owner", type: "address" },
+      { internalType: "address", name: "spender", type: "address" },
     ],
-    name: "initialize",
-    outputs: [],
-    stateMutability: "payable",
+    name: "allowance",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
     type: "function",
   },
   {
     inputs: [
-      { internalType: "address", name: "_logic", type: "address" },
-      { internalType: "bytes", name: "_data", type: "bytes" },
+      { internalType: "address", name: "owner", type: "address" },
+      { internalType: "address", name: "spender", type: "address" },
+      { internalType: "uint256", name: "value", type: "uint256" },
+      { internalType: "uint256", name: "deadline", type: "uint256" },
+      { internalType: "uint8", name: "v", type: "uint8" },
+      { internalType: "bytes32", name: "r", type: "bytes32" },
+      { internalType: "bytes32", name: "s", type: "bytes32" },
     ],
-    name: "initialize",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "address", name: "newImplementation", type: "address" },
-    ],
-    name: "upgradeTo",
+    name: "permit",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
     inputs: [
-      { internalType: "address", name: "newImplementation", type: "address" },
-      { internalType: "bytes", name: "data", type: "bytes" },
+      { internalType: "address", name: "recipient", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
     ],
-    name: "upgradeToAndCall",
-    outputs: [],
-    stateMutability: "payable",
+    name: "transfer",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "sender", type: "address" },
+      { internalType: "address", name: "recipient", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "transferFrom",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "nonpayable",
     type: "function",
   },
 ];
-
 
 async function main() {
   await hre.network.provider.send("hardhat_setBalance", [
@@ -113,12 +82,12 @@ async function main() {
     spender,
     "0x3684AB4DA86601424000000",
   ]);
-  let provider = ethers.getDefaultProvider();
+  let provider = new ethers.providers.AlchemyProvider( [ network = "mainnet" , [ apiKey ] ] )
   let contract = new ethers.Contract(aaveAddress, AaveTokenAbi, provider);
-  let privateKey = process.env.PRIVATE_KEY;
   let chainId = 1;
   let value = 2;
   let nonce = await contract._nonces(owner);
+  nonce = nonce.toNumber();
   let deadline = 1600093162;
 
   const permitParams = {
@@ -142,7 +111,7 @@ async function main() {
       name: "Aave Token",
       version: "1",
       chainId: chainId,
-      verifyingContract: aaveTokenAddress,
+      verifyingContract: aaveAddress,
     },
     message: {
       owner,
@@ -151,17 +120,15 @@ async function main() {
       nonce,
       deadline,
     },
-  }
-
+  };
   let wallet = new ethers.Wallet(privateKey, provider);
   let contractWithSigner = contract.connect(wallet);
 
-  const signature = signTypedData_v4(
-    Buffer.from(privateKey, "hex"),
-    { data: permitParams }
-  );
+  const signature = ethsig.signTypedData_v4(Buffer.from(privateKey, "hex"), {
+    data: permitParams,
+  });
 
-  const { v, r, s } = fromRpcSig(signature);
+  const { v, r, s } = fromRpcSig.fromRpcSig(signature);
   await contractWithSigner.permit({
     owner,
     spender,
@@ -169,10 +136,9 @@ async function main() {
     deadline,
     v,
     r,
-    s
+    s,
   });
 }
-
 
 main()
   .then(() => process.exit(0))
