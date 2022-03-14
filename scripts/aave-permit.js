@@ -8,7 +8,7 @@ const spender = "0x721C0E481Ae5763b425aCb1b04ba98baF480D83B";
 const aaveAddress = "0xC13eac3B4F9EED480045113B7af00F7B5655Ece8";
 
 const privateKey = process.env.PRIVATE_KEY;
-const apiKey = process.env.ALCHEMY_KEY;
+const apiKey = process.env.API_KEY;
 const AaveTokenAbi = [
   { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   {
@@ -82,7 +82,7 @@ async function main() {
     spender,
     "0x3684AB4DA86601424000000",
   ]);
-  let provider = new ethers.providers.AlchemyProvider( [ network = "mainnet" , [ apiKey ] ] )
+  let provider = new ethers.providers.AlchemyProvider("homestead", apiKey);
   let contract = new ethers.Contract(aaveAddress, AaveTokenAbi, provider);
   let chainId = 1;
   let value = 2;
@@ -136,7 +136,7 @@ async function main() {
     deadline,
     v,
     r,
-    s,
+    s
   });
 }
 
