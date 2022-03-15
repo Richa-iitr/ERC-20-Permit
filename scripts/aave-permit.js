@@ -76,11 +76,11 @@ const AaveTokenAbi = [
 async function main() {
   await hre.network.provider.send("hardhat_setBalance", [
     owner,
-    "0x3684AB4DA86601424000000",
+    "0x9F4F2726179A224501D762422C946590D9100",
   ]);
   await hre.network.provider.send("hardhat_setBalance", [
     spender,
-    "0x3684AB4DA86601424000000",
+    "0x9F4F2726179A224501D762422C946590D9100",
   ]);
   let provider = new ethers.providers.AlchemyProvider("homestead", apiKey);
   let contract = new ethers.Contract(aaveAddress, AaveTokenAbi, provider);
@@ -88,7 +88,8 @@ async function main() {
   let value = 2;
   let nonce = await contract._nonces(owner);
   nonce = nonce.toNumber();
-  let deadline = 1600093162;
+  let deadline = 0;
+  console.log(provider.getBalance(owner));
 
   const permitParams = {
     types: {
@@ -129,15 +130,18 @@ async function main() {
   });
 
   const { v, r, s } = fromRpcSig.fromRpcSig(signature);
-  await contractWithSigner.permit({
+  await contractWithSigner.permit(
     owner,
     spender,
     value,
     deadline,
     v,
     r,
-    s
-  });
+    s, {
+      gasLimit: 100000,
+      nonce: nonce || undefined,
+    }
+  );
 }
 
 main()
