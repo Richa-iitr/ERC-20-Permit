@@ -85,9 +85,9 @@ async function main() {
   
   await hre.network.provider.request({
     method: "hardhat_impersonateAccount",
-    params: ["0x6757f73cddf4c16171281ff869e620c6ce30e12b"],
+    params: ["0x00000000219ab540356cBB839Cbe05303d7705Fa"],
   });
-  const signer = await ethers.getSigner("0x6757f73cddf4c16171281ff869e620c6ce30e12b");
+  const signer = await ethers.getSigner("0x00000000219ab540356cBB839Cbe05303d7705Fa");
 
   let provider = new ethers.providers.AlchemyProvider("homestead", apiKey);
   let contract = new ethers.Contract(aaveAddress, AaveTokenAbi, signer);
