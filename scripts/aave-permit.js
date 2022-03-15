@@ -7,8 +7,8 @@ const owner = "0x15C6b352c1F767Fa2d79625a40Ca4087Fab9a198";
 const spender = "0x721C0E481Ae5763b425aCb1b04ba98baF480D83B";
 const aaveAddress = "0xC13eac3B4F9EED480045113B7af00F7B5655Ece8";
 
-const privateKey = process.env.PRIVATE_KEY;
-const apiKey = process.env.API_KEY;
+const privateKey = "4df23289d68410e41293f85be6bffd3378b90d3f7d46b7f990634886ff05c678";
+const apiKey = "oZ0ogaANt4gJcDA_ZtBN2_JM6CMF0r-s";
 const AaveTokenAbi = [
   { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   {
@@ -85,17 +85,21 @@ async function main() {
   
   await hre.network.provider.request({
     method: "hardhat_impersonateAccount",
-    params: ["0x00000000219ab540356cBB839Cbe05303d7705Fa"],
+    params: ["0xDA9dfA130Df4dE4673b89022EE50ff26f6EA73Cf"],
   });
-  const signer = await ethers.getSigner("0x00000000219ab540356cBB839Cbe05303d7705Fa");
+  // await hre.network.provider.request({
+  //   method: "hardhat_impersonateAccount",
+  //   params: ["0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8"],
+  // });
+  const signer = await ethers.getSigner("0xDA9dfA130Df4dE4673b89022EE50ff26f6EA73Cf");
 
   let provider = new ethers.providers.AlchemyProvider("homestead", apiKey);
   let contract = new ethers.Contract(aaveAddress, AaveTokenAbi, signer);
   let chainId = 1;
-  let value = 0;
+  let value = 10;
   let nonce = await contract._nonces(owner);
   nonce = nonce.toNumber();
-  let deadline = 0;
+  let deadline = Date.now() + 20*60;
 
   const permitParams = {
     types: {
@@ -130,13 +134,15 @@ async function main() {
   };
   // let wallet = new ethers.Wallet(privateKey, provider);
   // let contractWithSigner = contract.connect(wallet);
+  
 
   const signature = ethsig.signTypedData_v4(Buffer.from(privateKey, "hex"), {
     data: permitParams,
   });
-
+  // console.log(signature);
   const { v, r, s } = fromRpcSig.fromRpcSig(signature);
-  await contract.permit(
+
+  let tx = await contract.connect(signer).permit(
     owner,
     spender,
     value,
@@ -148,6 +154,7 @@ async function main() {
       nonce: nonce || undefined,
     }
   );
+  console.log(tx);
 }
 
 main()
@@ -156,3 +163,42 @@ main()
     console.error(error);
     process.exit(1);
   });
+
+
+
+  // const signature = await signer._signTypedData(domain, types, message);
+  // // const signature = ethsig.signTypedData_v4(Buffer.from(privateKey, "hex"), {
+  // //   data: permitParams,
+  // // });
+  // console.log(signature);
+
+  // const {v, r, s} = ethers.utils.splitSignature(signature);
+  // // const { v, r, s } = fromRpcSig.fromRpcSig(signature);
+  // const types ={
+  //   EIP712Domain: [
+  //     { name: "name", type: "string" },
+  //     { name: "version", type: "string" },
+  //     { name: "chainId", type: "uint256" },
+  //     { name: "verifyingContract", type: "address" },
+  //   ],
+  //   Permit: [
+  //     { name: "owner", type: "address" },
+  //     { name: "spender", type: "address" },
+  //     { name: "value", type: "uint256" },
+  //     { name: "nonce", type: "uint256" },
+  //     { name: "deadline", type: "uint256" },
+  //   ],
+  // };
+  // const message = {
+  //   owner,
+  //   spender,
+  //   value,
+  //   nonce,
+  //   deadline,
+  // };
+  // const domain = {
+  //   name: "Aave Token",
+  //   version: "1",
+  //   chainId: chainId,
+  //   verifyingContract: aaveAddress,
+  // };
