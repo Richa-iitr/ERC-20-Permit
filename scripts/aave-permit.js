@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const dotenv = require("dotenv");
 const ethsig = require("eth-sig-util");
-const fromRpcSig = require("ethereumjs-util");
+const {ecsign} = require("ethereumjs-util");
 const owner = "0x15C6b352c1F767Fa2d79625a40Ca4087Fab9a198";
 const spender = "0x721C0E481Ae5763b425aCb1b04ba98baF480D83B";
 const aaveAddress = "0xC13eac3B4F9EED480045113B7af00F7B5655Ece8";
@@ -135,14 +135,56 @@ async function main() {
   // let wallet = new ethers.Wallet(privateKey, provider);
   // let contractWithSigner = contract.connect(wallet);
   
+  const domainSep = ethers.utils.keccak256(
+    ethers.utils.defaultAbiCoder.encode(
+      ['bytes32', 'bytes32', 'bytes32', 'uint256', 'address'],
+      [
+        ethers.utils.keccak256(ethers.utils.toUtf8Bytes(
+          'EIP712Domain(string name, string version, uint256 chainId, address verifyingContract)'
+          )
+        ),
+        ethers.utils.keccak256(ethers.utils.toUtf8Bytes(
+          'AAVE Token'
+          )
+        ),
+        ethers.utils.keccak256(ethers.utils.toUtf8Bytes(
+          '1'
+          )
+        ),
+        chainId,
+        aaveAddress,
+      ]
+    )
+  );
+  const PERMIT_HASH = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(
+    'Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)'
+  )
+  );
+  const aaveDigest = ethers.utils.keccak256(
+    ethers.utils.solidityPack(
+      ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
+      [
+        '0x19',
+        '0x01',
+        domainSep,
+        ethers.utils.keccak256(
+          ethers.utils.defaultAbiCoder.encode(
+            ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
+            [PERMIT_HASH, owner, spender, value, nonce, deadline]
+          )
+        )
+      ]
+    )
+  )
 
-  const signature = ethsig.signTypedData_v4(Buffer.from(privateKey, "hex"), {
-    data: permitParams,
-  });
-  // console.log(signature);
-  const { v, r, s } = fromRpcSig.fromRpcSig(signature);
+  // const signature = ethsig.signTypedData_v4(Buffer.from(privateKey, "hex"), {
+  //   data: permitParams,
+  // });
+  // // console.log(signature);
+  // const { v, r, s } = fromRpcSig.fromRpcSig(signature);
 
-  let tx = await contract.connect(signer).permit(
+  const { v, r, s } = ecsign(Buffer.from(aaveDigest.slice(2), 'hex'), Buffer.from(privateKey,'hex'));
+  let tx = await contract.permit(
     owner,
     spender,
     value,
