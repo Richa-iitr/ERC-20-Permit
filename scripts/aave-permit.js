@@ -7,8 +7,8 @@ const owner = "0x15C6b352c1F767Fa2d79625a40Ca4087Fab9a198";
 const spender = "0x721C0E481Ae5763b425aCb1b04ba98baF480D83B";
 const aaveAddress = "0xC13eac3B4F9EED480045113B7af00F7B5655Ece8";
 
-const privateKey = "4df23289d68410e41293f85be6bffd3378b90d3f7d46b7f990634886ff05c678";
-const apiKey = "oZ0ogaANt4gJcDA_ZtBN2_JM6CMF0r-s";
+const privateKey = process.env.PRIVATE_KEY;
+const apiKey = process.env.API_KEY;
 const AaveTokenAbi = [
   { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   {
