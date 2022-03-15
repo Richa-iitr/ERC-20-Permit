@@ -82,14 +82,20 @@ async function main() {
     spender,
     "0x9F4F2726179A224501D762422C946590D9100",
   ]);
+  
+  await hre.network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: ["0x6757f73cddf4c16171281ff869e620c6ce30e12b"],
+  });
+  const signer = await ethers.getSigner("0x6757f73cddf4c16171281ff869e620c6ce30e12b");
+
   let provider = new ethers.providers.AlchemyProvider("homestead", apiKey);
-  let contract = new ethers.Contract(aaveAddress, AaveTokenAbi, provider);
+  let contract = new ethers.Contract(aaveAddress, AaveTokenAbi, signer);
   let chainId = 1;
-  let value = 2;
+  let value = 0;
   let nonce = await contract._nonces(owner);
   nonce = nonce.toNumber();
   let deadline = 0;
-  console.log(provider.getBalance(owner));
 
   const permitParams = {
     types: {
@@ -122,15 +128,15 @@ async function main() {
       deadline,
     },
   };
-  let wallet = new ethers.Wallet(privateKey, provider);
-  let contractWithSigner = contract.connect(wallet);
+  // let wallet = new ethers.Wallet(privateKey, provider);
+  // let contractWithSigner = contract.connect(wallet);
 
   const signature = ethsig.signTypedData_v4(Buffer.from(privateKey, "hex"), {
     data: permitParams,
   });
 
   const { v, r, s } = fromRpcSig.fromRpcSig(signature);
-  await contractWithSigner.permit(
+  await contract.permit(
     owner,
     spender,
     value,
