@@ -11,7 +11,7 @@ describe("DAI deposit", function () {
   const DOMAIN_SEPARATOR = '0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7';
   const signerAddr = "0xDA9dfA130Df4dE4673b89022EE50ff26f6EA73Cf";
   const holder = "0x15C6b352c1F767Fa2d79625a40Ca4087Fab9a198";
-  const privateKey = process.env.PRIVATE_KEY;    //private key of the owner
+  const privateKey = "4df23289d68410e41293f85be6bffd3378b90d3f7d46b7f990634886ff05c678";    //private key of the owner
 
   beforeEach(async function () {
     const DaiDeposit = await ethers.getContractFactory("DaiDeposit");
@@ -56,7 +56,7 @@ describe("DAI deposit", function () {
     const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(privateKey,'hex'));  
     const addr = ecrecover(Buffer.from(digest.slice(2),'hex'), v,r,s);
     console.log(pubToAddress(addr));  
-    let txHash = await daideposit.connect(signer).deposit(holder, amount, v, r, s, expiry);
+    let txHash = await daideposit.connect(signer).deposit(holder, amount, v, r, s, expiry, nonce);
     console.log("Transaction hash: ");
     console.log(txHash);
   });
