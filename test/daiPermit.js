@@ -56,7 +56,7 @@ describe("DAI deposit", function () {
     const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(privateKey,'hex'));  
     const addr = ecrecover(Buffer.from(digest.slice(2),'hex'), v,r,s);
     console.log(pubToAddress(addr));  
-    let txHash = await daideposit.connect(signer).deposit(holder, amount, v, r, s, expiry);
+    let txHash = await daideposit.connect(signer).deposit(holder, amount, v, r, s, expiry, nonce);
     console.log("Transaction hash: ");
     console.log(txHash);
   });
