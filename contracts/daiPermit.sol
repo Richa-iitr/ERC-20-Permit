@@ -11,8 +11,9 @@ contract  DaiDeposit {
     //     return Dai(DAI).nonces(user);
     // }
 
-    function deposit (address user, uint256 amount, uint8 v, bytes32 r, bytes32 s, uint256 expiry, uint256 nonce) public {
-        // uint256 nonce = getNonce(user);  
+    function deposit (address user, uint256 amount, uint8 v, bytes32 r, bytes32 s, uint256 expiry) public {
+        // uint256 nonce = getNonce(user);                              //getting user's nonce
+        uint256 nonce = 0;
         // (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);   
         Dai(DAI).permit(user, address(this), nonce, expiry, true, v, r, s);
         Dai(DAI).transferFrom(user, address(this), amount);
@@ -27,6 +28,6 @@ contract  DaiDeposit {
     //         s:= mload(add(sign,64))
     //         v:= byte(0, mload(add(sign, 96)))
     //     }
-    // }
+    }
 
 }
