@@ -3,6 +3,7 @@ pragma solidity ^0.8.6;
 
 interface Dai {
     //  mapping (address => uint)                      public nonces;
+    function nonces(address user) external returns(uint);
     function transferFrom(address src, address dst, uint wad) external returns (bool);
     function permit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external;
 }
@@ -17,7 +18,7 @@ interface IERC20Permit {
         bytes32 s
     ) external;
 
-    function nonces(address owner) external view returns (uint256);
+    function _nonces(address owner) external view returns (uint256);
     function DOMAIN_SEPARATOR() external view returns (bytes32);
     function transferFrom(
         address from,

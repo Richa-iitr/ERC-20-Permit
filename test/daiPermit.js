@@ -102,7 +102,7 @@ describe("Deposit ERC20", function () {
     console.log(`Amount: ${amount}`);
     console.log();
 
-    let nonces = await dai.connect(signer).nonces(holder);
+    let nonces = await await erc20deposit.callStatic.getNonce(holder, daiAddress);
     let nonce = nonces.toNumber();
 
     const digest = ethers.utils.keccak256(
@@ -135,7 +135,7 @@ describe("Deposit ERC20", function () {
     );
     let txHash = await erc20deposit
       .connect(signer)
-      .deposit(holder, daiAddress, amount, v, r, s, expiry, nonce);
+      .deposit(holder, daiAddress, amount, v, r, s, expiry);
     console.log("DAI Transaction hash: ");
     console.log(txHash);
     console.log();
@@ -148,7 +148,8 @@ describe("Deposit ERC20", function () {
     let signer, aave;
     const aaveAddress = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9";
 
-    const signerAddr = "0x4048c47b546b68ad226ea20b5f0acac49b086a21";
+    // const signerAddr = "0x4048c47b546b68ad226ea20b5f0acac49b086a21";
+    const signerAddr = "0x26a78D5b6d7a7acEEDD1e6eE3229b372A624d8b7";
 
     const PERMIT_TYPEHASH =
       "0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9";
@@ -170,8 +171,9 @@ describe("Deposit ERC20", function () {
     console.log(`Amount: ${amount}`);
     console.log();
 
-    let nonces = await aave.connect(signer)._nonces(holder);
+    let nonces = await erc20deposit.callStatic.getNonce(holder, aaveAddress);
     let nonce = nonces.toNumber();
+
     const digest = ethers.utils.keccak256(
       ethers.utils.solidityPack(
         ["bytes1", "bytes1", "bytes32", "bytes32"],
@@ -209,7 +211,7 @@ describe("Deposit ERC20", function () {
     );
     let txHash = await erc20deposit
       .connect(signer)
-      .deposit(holder, aaveAddress, amount, v, r, s, expiry, nonce);
+      .deposit(holder, aaveAddress, amount, v, r, s, expiry);
     console.log("AAVE Transaction hash: ");
     console.log(txHash);
     console.log();
