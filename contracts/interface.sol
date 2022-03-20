@@ -18,8 +18,6 @@ interface IERC20Permit {
         bytes32 s
     ) external;
 
-    function _nonces(address owner) external view returns (uint256);
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
     function transferFrom(
         address from,
         address to,
