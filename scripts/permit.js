@@ -11,10 +11,11 @@ const {
 } = require("ethereumjs-util");
 const Web3 = require("web3");
 const BigNumber = require("bignumber.js");
+const { ContractFunctionVisibility } = require("hardhat/internal/hardhat-network/stack-traces/model");
 
 const web3 = new Web3(
   new Web3.providers.HttpProvider(
-    `https://polygon-mumbai.g.alchemy.com/v2/${process.env.alchemy_key}`
+    `https://polygon-mumbai.g.alchemy.com/v2/${KEY}`
   )
 );
 
@@ -25,6 +26,7 @@ const aaveAddress = "0x7ec62b6fC19174255335C8f4346E0C2fcf870a6B";
 
 const privateKey =
   process.env.PRIVATE_KEY; //private key of the owner
+const privateKey2 = process.env.Spender_key;
 
 //AAVE Token contract implementation ABI
 const AaveTokenAbi = [
@@ -62,6 +64,20 @@ const AaveTokenAbi = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    inputs: [],
+    name: "DOMAIN_SEPARATOR",
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "PERMIT_TYPEHASH",
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ];
 
 async function ercPermit() {
@@ -72,82 +88,114 @@ async function ercPermit() {
   console.log(nonce);
   let deadline = Date.now() + 20 * 60;
 
-  const domainSep = web3.utils.keccak256(
-    web3.eth.abi.encodeParameters(
-      ["bytes32", "bytes32", "bytes32", "uint256", "address"],
-      [
-        web3.utils.keccak256(
-          web3.utils.hexToUtf8(
-            web3.utils.toHex(
-              "EIP712Domain(string name, string version, uint256 chainId, address verifyingContract)"
+  const DS = await contract.methods.DOMAIN_SEPARATOR().call();
+  console.log(DS);
+  const PH = await contract.methods.PERMIT_TYPEHASH().call();
+  console.log(PH);
+
+//     const permitParams = {
+//       types: {
+//         EIP712Domain: [
+//           { name: "name", type: "string" },
+//           { name: "version", type: "string" },
+//           { name: "chainId", type: "uint256" },
+//           { name: "verifyingContract", type: "address" },
+//         ],
+//         Permit: [
+//           { name: "owner", type: "address" },
+//           { name: "spender", type: "address" },
+//           { name: "value", type: "uint256" },
+//           { name: "nonce", type: "uint256" },
+//           { name: "deadline", type: "uint256" },
+//         ],
+//       },
+//       primaryType: "Permit",
+//       domain: {
+//         name: "Aave Token",
+//         version: "1",
+//         chainId: chainId,
+//         verifyingContract: aaveAddress,
+//       },
+//       message: {
+//         owner,
+//         spender,
+//         value,
+//         nonce,
+//         deadline,
+//       },
+//     }
+//     const data = JSON.stringify(permitParams);
+//     const aaveDigest = await web3.eth.accounts.sign(data, privateKey);
+//     console.log(aaveDigest);
+  
+//   const signature = aaveDigest.signature;
+  
+//   let addr = await web3.eth.accounts.recover({
+//     messageHash: aaveDigest.messageHash,
+//     v: aaveDigest.v,
+//     r: aaveDigest.r,
+//     s: aaveDigest.s
+// })
+
+// let v = aaveDigest.v;
+// let r = aaveDigest.r;
+// let s = aaveDigest.s;
+// console.log(addr);
+
+const aaveDigest = web3.utils.keccak256(
+    web3.utils.encodePacked(web3.eth.abi.encodeParameters(
+        ["bytes1", "bytes1", "bytes32", "bytes32"],
+        [
+          "0x19",
+          "0x01",
+          DS,
+          web3.utils.keccak256(
+            web3.eth.abi.encodeParameters(
+              [
+                "bytes32",
+                "address",
+                "address",
+                "uint256",
+                "uint256",
+                "uint256",
+              ],
+              [PH, owner, spender, value, nonce, deadline]
             )
-          )
-        ),
-        web3.utils.keccak256(
-          web3.utils.hexToUtf8(web3.utils.toHex("AAVE Token"))
-        ),
-        web3.utils.keccak256(web3.utils.hexToUtf8(web3.utils.toHex("1"))),
-        chainId,
-        aaveAddress,
-      ]
+          ),
+        ]
+    )
     )
   );
-  console.log(domainSep);
-  const PERMIT_HASH =
-    "0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9";
+  console.log(`a:${aaveDigest}`);
+  const { v, r, s } = ecsign(
+    Buffer.from(aaveDigest.slice(2), "hex"),
+    Buffer.from(privateKey, "hex")
+  );
+  console.log(v);
+  console.log(r);
+  console.log(s);
+  const addr = ecrecover(Buffer.from(aaveDigest.slice(2), "hex"), v, r, s);
+  console.log(pubToAddress(addr));
 
-    const permitParams = {
-      types: {
-        EIP712Domain: [
-          { name: "name", type: "string" },
-          { name: "version", type: "string" },
-          { name: "chainId", type: "uint256" },
-          { name: "verifyingContract", type: "address" },
-        ],
-        Permit: [
-          { name: "owner", type: "address" },
-          { name: "spender", type: "address" },
-          { name: "value", type: "uint256" },
-          { name: "nonce", type: "uint256" },
-          { name: "deadline", type: "uint256" },
-        ],
-      },
-      primaryType: "Permit",
-      domain: {
-        name: "Aave Token",
-        version: "1",
-        chainId: chainId,
-        verifyingContract: aaveAddress,
-      },
-      message: {
-        owner,
-        spender,
-        value,
-        nonce,
-        deadline,
-      },
-    }
-    const data = JSON.stringify(permitParams);
-    const aaveDigest = await web3.eth.accounts.sign(data, privateKey);
-    console.log(aaveDigest);
-  
-  const signature = aaveDigest.signature;
-  
-  let addr = await web3.eth.accounts.recover({
-    messageHash: aaveDigest.messageHash,
-    v: aaveDigest.v,
-    r: aaveDigest.r,
-    s: aaveDigest.s
-})
+  // const transaction = {
+  //     'from': spender,
+  //     'gas': 53000,
+  //     'nonce': await web3.eth.getTransactionCount(owner, 'latest'),
+  //   }
+  //   const signedTx = await web3.eth.accounts.signTransaction(transaction, privateKey);
+  //   web3.eth.sendSignedTransaction(signedTx.rawTransaction, function(error, hash) {
+  //     if (!error) {
+  //       console.log("hash  ", hash);
+  //     } else {
+  //       console.log("something went wrong", error)
+  //     }
+  //    });
 
-let v = aaveDigest.v;
-let r = aaveDigest.r;
-let s = aaveDigest.s;
-console.log(addr);
+  web3.eth.accounts.wallet.add(privateKey2);
   
   await contract.methods
     .permit(owner, spender, value, deadline, v, r, s)
-    .call()
+    .send({from: spender, gas: 23340})
     .then(function (hash) {
       console.log(hash);
     })
