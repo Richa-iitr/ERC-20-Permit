@@ -1,7 +1,14 @@
 const hre = require("hardhat");
 const dotenv = require("dotenv");
 const { signTypedData_v4, recoverPersonalSignature } = require("eth-sig-util");
-const { fromRpcSig, ecrecover, toBuffer, bufferToHex } = require("ethereumjs-util");
+const {
+  fromRpcSig,
+  ecrecover,
+  toBuffer,
+  bufferToHex,
+  ecsign,
+  pubToAddress,
+} = require("ethereumjs-util");
 const Web3 = require("web3");
 const BigNumber = require("bignumber.js");
 
@@ -58,15 +65,107 @@ const AaveTokenAbi = [
 ];
 
 async function ercPermit() {
-
   let contract = new web3.eth.Contract(AaveTokenAbi, aaveAddress);
   let chainId = 80001;
-  let value = 10;
-  let nonces = await contract.methods._nonces(owner).call();
-  const nonce = nonces;
+  let value = 1;
+  let nonce = await contract.methods._nonces(owner).call();
 
   let deadline = Date.now() + 20 * 60;
-  // const permitParams = {
+ 
+  const domainSep = web3.utils.soliditySha3(
+    web3.utils.encodePacked(
+      ['bytes32', 'bytes32', 'bytes32', 'uint256', 'address'],
+      [
+        web3.utils.soliditySha3(web3.utils.hexToUtf8(web3.utils.toHex(
+          'EIP712Domain(string name, string version, uint256 chainId, address verifyingContract)'
+          ))
+        ),
+        web3.utils.soliditySha3(web3.utils.hexToUtf8(web3.utils.toHex(
+          'AAVE Token'
+          ))
+        ),
+        web3.utils.soliditySha3(web3.utils.hexToUtf8(web3.utils.toHex(
+          '1'
+          ))
+        ),
+        chainId,
+        aaveAddress,
+      ]
+    )
+  );
+  console.log(domainSep);
+  const PERMIT_HASH =
+    "0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9";
+  const aaveDigest = web3.utils.soliditySha3(
+    web3.eth.abi.encodeParameters(
+      ["bytes1", "bytes1", "bytes32", "bytes32"],
+      [
+        "0x19",
+        "0x01",
+        domainSep,
+        web3.utils.soliditySha3(
+          web3.eth.abi.encodeParameters(
+            ["bytes32", "address", "address", "uint256", "uint256", "uint256"],
+            [PERMIT_HASH, owner, spender, value, nonce, deadline]
+          )
+        ),
+      ]
+    )
+  );
+  console.log(aaveDigest);
+  const { v, r, s } = ecsign(
+    Buffer.from(aaveDigest.slice(2), "hex"),
+    Buffer.from(privateKey, "hex")
+  );
+  const addr = ecrecover(Buffer.from(aaveDigest.slice(2), "hex"), v, r, s);
+  console.log(pubToAddress(addr));
+  console.log("Permit txHash:");
+
+  // const transaction = {
+  //   'from': spender,
+  //   'gas': 53000,
+  //   'nonce': await web3.eth.getTransactionCount(owner, 'latest'),
+  // }
+  // const signedTx = await web3.eth.accounts.signTransaction(transaction, privateKey);
+  // const Hash="";
+  // web3.eth.sendSignedTransaction(signedTx.rawTransaction, function(error, hash) {
+  //   if (!error) {
+  //     Hash =hash;
+  //     console.log("hash  ", hash);
+  //   } else {
+  //     console.log("something went wrong", error)
+  //   }
+  //  });
+
+  await contract.methods
+    .permit(owner, spender, value, deadline, v, r, s)
+    .call()
+    .then(function (hash) {
+      console.log(hash);
+    })
+    .catch((e) => {
+      throw Error(`Error permitting: ${e.message}`);
+    });
+
+  console.log("Transfer From txHash:");
+  let tx2 = await contract.methods
+    .transferFrom(owner, spender, 0)
+    .call()
+    .catch((e) => {
+      throw Error(`Error transferring from: ${e.owner}`);
+    });
+  console.log(tx2);
+}
+
+ercPermit()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+
+
+   // const permitParams = {
   //   types: {
   //     EIP712Domain: [
   //       { name: "name", type: "string" },
@@ -102,51 +201,3 @@ async function ercPermit() {
   //   data: permitParams,
   // });
   // const { v, r, s } = fromRpcSig(signature);
-
-  const domainSep = '0x2901a982e363189e3f2e4db2e5c3291fa1067b815a3ac9890ac6573e51bf33b0';
-  const PERMIT_HASH = '0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9';
-  const aaveDigest = web3.utils.soliditySha3(
-    web3.utils.solidityPack(
-      ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
-      [
-        '0x19',
-        '0x01',
-        domainSep,
-        web3.utils.soliditySha3(
-          web3.eth.abi.encodeFunctionSignature(
-            ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
-            [PERMIT_HASH, owner, spender, value, nonce, deadline]
-          )
-        )
-      ]
-    )
-  );
-
-  const { v, r, s } = ecsign(Buffer.from(aaveDigest.slice(2), 'hex'), Buffer.from(privateKey,'hex'));
-
-  console.log("Permit txHash:");
-  let tx = await contract.methods
-    .permit(owner, spender, value, deadline, v, r, s)
-    .call()
-    .catch((e) => {
-      throw Error(`Error permitting: ${e.message}`);
-    });
-  console.log(tx);
-  console.log();
-
-  console.log("Transfer From txHash:");
-  let tx2 = await contract.methods
-    .transferFrom(owner, spender, 0)
-    .call()
-    .catch((e) => {
-      throw Error(`Error transferring from: ${e.owner}`);
-    });
-  console.log(tx2);
-}
-
-ercPermit()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
